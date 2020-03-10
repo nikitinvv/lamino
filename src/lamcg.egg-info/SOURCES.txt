@@ -1,0 +1,9 @@
+MANIFEST.in
+setup.py
+_skbuild/linux-x86_64-3.7/cmake-install/src/lamcg/_lamusfft.so
+_skbuild/linux-x86_64-3.7/cmake-install/src/lamcg/lamusfft.py
+src/lamcg.egg-info/PKG-INFO
+src/lamcg.egg-info/SOURCES.txt
+src/lamcg.egg-info/dependency_links.txt
+src/lamcg.egg-info/not-zip-safe
+src/lamcg.egg-info/top_level.txt
