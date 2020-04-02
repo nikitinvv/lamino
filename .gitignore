@@ -1,0 +1,4 @@
+_skbuild*
+dist*
+tests/data
+tests/rec*

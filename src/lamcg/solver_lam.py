@@ -76,7 +76,7 @@ class SolverLam(lamusfft):
             # update step
             u = u + gamma*d
             # check convergence
-            if (np.mod(i, 1) == 0):
+            if (np.mod(i, 1) == -1):
                 print("%4d, %.3e, %.7e" %
                       (i, gamma, minf(Lu)))
         return u        
