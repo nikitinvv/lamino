@@ -42,18 +42,46 @@ class SolverLam(lamusfft):
         # C++ wrapper, send pointers to GPU arrays        
         self.adj(res.data.ptr, data.data.ptr, theta.data.ptr)
         return res    
-    def adj_lam(self, data, theta):
-        """Adjoint Radon transform (R^*)"""
-        res = cp.zeros([self.n2, self.n1, self.n0], dtype='complex64')
-        # C++ wrapper, send pointers to GPU arrays        
-        self.adj(res.data.ptr, data.data.ptr, theta.data.ptr)
-        return res            
+    
+    def fwd_reg(self, u):
+        """Forward operator for regularization (J)"""
+        res = cp.get_array_module(u).zeros([3, *u.shape], dtype='complex64')
+        res[0, :, :, :-1] = u[:, :, 1:]-u[:, :, :-1]
+        res[1, :, :-1, :] = u[:, 1:, :]-u[:, :-1, :]
+        res[2, :-1, :, :] = u[1:, :, :]-u[:-1, :, :]
+        return res
+
+    def adj_reg(self, gr):
+        """Adjoint operator for regularization (J*)"""
+        res = cp.get_array_module(gr).zeros(gr.shape[1:], dtype='complex64')
+        res[:, :, 1:] = gr[0, :, :, 1:]-gr[0, :, :, :-1]
+        res[:, :, 0] = gr[0, :, :, 0]
+        res[:, 1:, :] += gr[1, :, 1:, :]-gr[1, :, :-1, :]
+        res[:, 0, :] += gr[1, :, 0, :]
+        res[1:, :, :] += gr[2, 1:, :, :]-gr[2, :-1, :, :]
+        res[0, :, :] += gr[2, 0, :, :]
+        return -res
+        
+    def solve_reg(self, u, mu, tau, alpha):
+        """Solution of the L1 problem by soft-thresholding"""
+        z = self.fwd_reg(u)+mu/tau
+        za = np.sqrt(np.real(np.sum(z*np.conj(z), 0)))
+        z[:, za <= alpha/tau] = 0
+        z[:, za > alpha/tau] -= alpha/tau * \
+            z[:, za > alpha/tau]/(za[za > alpha/tau])
+        return z               
     
     def line_search(self, minf, gamma, Lu, Ld):
         """Line search for the step sizes gamma"""
         while(minf(Lu)-minf(Lu+gamma*Ld) < 0):
             gamma *= 0.5
         return gamma        
+
+    def line_search_ext(self, minf, gamma, Lu, Ld, gu, gd):
+        """Line search for the step sizes gamma"""
+        while(minf(Lu, gu)-minf(Lu+gamma*Ld, gu+gamma*gd) < 0):
+            gamma *= 0.5
+        return gamma 
 
     def cg_lam(self, data, u, theta, titer):
         """CG solver for ||Lu-data||_2"""
@@ -79,4 +107,35 @@ class SolverLam(lamusfft):
             if (np.mod(i, 1) == -1):
                 print("%4d, %.3e, %.7e" %
                       (i, gamma, minf(Lu)))
+        return u        
+
+    def cg_lam_ext(self, data, u, theta, titer, tau=0, xi1=None):
+        """CG solver for ||Lu-data||_2+tau||Ju-xi1||_2"""
+        # minimization functional
+        if(tau == 0):
+            xi1 = cp.zeros([3, *u.shape], dtype='complex64')
+        def minf(Lu, gu):
+            f = cp.linalg.norm(Lu-data)**2 + tau*cp.linalg.norm(gu-xi1)**2
+            return f
+        for i in range(titer):
+            Lu = self.fwd_lam(u,theta)
+            gu = self.fwd_reg(u)
+            grad = (self.adj_lam(Lu-data, theta) * 1/self.ntheta/self.n0/self.n1/self.n2 +\
+                tau*self.adj_reg(gu-xi1)/2)/max(tau,1)# normalized gradient
+            if i == 0:
+                d = -grad
+            else:
+                d = -grad+cp.linalg.norm(grad)**2 / \
+                    (cp.sum(cp.conj(d)*(grad-grad0))+1e-32)*d
+            # line search
+            Ld = self.fwd_lam(d, theta)
+            gd = self.fwd_reg(d)
+            gamma = 0.5*self.line_search_ext(minf, 1, Lu, Ld, gu, gd)
+            grad0 = grad
+            # update step
+            u = u + gamma*d
+            # check convergence
+            if (np.mod(i, 1) == -1):
+                print("%4d, %.3e, %.7e" %
+                      (i, gamma, minf(Lu,gu)))
         return u        
