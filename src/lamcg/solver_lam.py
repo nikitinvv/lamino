@@ -16,10 +16,10 @@ class SolverLam(lamusfft):
         The number of projections.    
     """
 
-    def __init__(self, n0, n1, n2, det, ntheta, phi):
+    def __init__(self, n0, n1, n2, det, ntheta, phi,eps=1e-3):
         """Please see help(SolverLam) for more info."""
         # create class for the tomo transform associated with first gpu
-        super().__init__(n2, n1, n0, det, ntheta, phi)# reorder sizes
+        super().__init__(n2, n1, n0, det, ntheta, phi, eps)# reorder sizes
         
     def __enter__(self):
         """Return self at start of a with-block."""
@@ -83,7 +83,7 @@ class SolverLam(lamusfft):
             gamma *= 0.5
         return gamma 
 
-    def cg_lam(self, data, u, theta, titer):
+    def cg_lam(self, data, u, theta, titer,dbg=False):
         """CG solver for ||Lu-data||_2"""
         # minimization functional
         def minf(Lu):
@@ -104,19 +104,20 @@ class SolverLam(lamusfft):
             # update step
             u = u + gamma*d
             # check convergence
-            if (np.mod(i, 1) == -1):
+            if (np.mod(i, 1) == 0 and dbg):
                 print("%4d, %.3e, %.7e" %
                       (i, gamma, minf(Lu)))
         return u        
 
-    def cg_lam_ext(self, data, u, theta, titer, tau=0, xi1=None):
+    def cg_lam_ext(self, data, u, theta, titer, tau=0, xi1=None,dbg=False):
         """CG solver for ||Lu-data||_2+tau||Ju-xi1||_2"""
         # minimization functional
         if(tau == 0):
             xi1 = cp.zeros([3, *u.shape], dtype='complex64')
+
         def minf(Lu, gu):
-            f = cp.linalg.norm(Lu-data)**2 + tau*cp.linalg.norm(gu-xi1)**2
-            return f
+            return  cp.linalg.norm(Lu-data)**2 + tau*cp.linalg.norm(gu-xi1)**2
+            
         for i in range(titer):
             Lu = self.fwd_lam(u,theta)
             gu = self.fwd_reg(u)
@@ -135,7 +136,7 @@ class SolverLam(lamusfft):
             # update step
             u = u + gamma*d
             # check convergence
-            if (np.mod(i, 1) == -1):
+            if (np.mod(i, 1) == 0 and dbg==True):
                 print("%4d, %.3e, %.7e" %
                       (i, gamma, minf(Lu,gu)))
         return u        

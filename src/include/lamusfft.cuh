@@ -26,7 +26,6 @@ class lamusfft {
   float *y;
   float *z;
 
-  float2 *fde;
   float2 *fdee;
 
   cufftHandle plan3dfwd;
@@ -42,7 +41,7 @@ public:
   size_t ntheta; // number of angles
   float phi;
 
-  lamusfft(size_t n0, size_t n1, size_t n2, size_t det, size_t ntheta, float phi);
+  lamusfft(size_t n0, size_t n1, size_t n2, size_t det, size_t ntheta, float phi, float eps);
   ~lamusfft();
   void fwd(size_t g, size_t f, size_t theta);
   void adj(size_t f, size_t g, size_t theta);

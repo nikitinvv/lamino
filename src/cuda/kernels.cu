@@ -1,7 +1,7 @@
 #define PI 3.1415926535897932384626433
 
 // Divide by phi
-void __global__ divker(float2 *g, float2 *f, float mu0, float mu1, float mu2, int n0, int n1, int n2, dir direction) {
+void __global__ divker(float2 *g, float2 *f, float mu0, float mu1, float mu2, int n0, int n1, int n2, int m0, int m1, int m2, dir direction) {
   int tx = blockDim.x * blockIdx.x + threadIdx.x;
   int ty = blockDim.y * blockIdx.y + threadIdx.y;
   int tz = blockDim.z * blockIdx.z + threadIdx.z;
@@ -18,9 +18,9 @@ void __global__ divker(float2 *g, float2 *f, float mu0, float mu1, float mu2, in
     + tz * n0 * n1 
   );
   int g_ind = (
-    + (tx + n0 / 2)
-    + (ty + n1 / 2) * 2 * n0
-    + (tz + n2 / 2) * 4 * n0  * n1
+    + (tx + n0 / 2+m0)
+    + (ty + n1 / 2+m1) * (2 * n0 +2*m0)
+    + (tz + n2 / 2+m2) * (2 * n0 +2*m0)  * (2 * n1 +2*m1)
   );
   if (direction == TOMO_FWD){
     g[g_ind].x = f[f_ind].x / ker / (8 * n0 * n1 * n2);
