@@ -1,8 +1,8 @@
 import numpy as np
 import lamcg as lcg
 from mpl_toolkits.mplot3d import Axes3D
-import cupy as cp
 import matplotlib.pyplot as plt
+
 def eq2us(x, f, eps, N):
     """
     USFFT from equally-spaced grid to unequally-spaced grid
@@ -195,43 +195,28 @@ det = 8
 ntheta = 8
 phi = np.pi/3
 theta = np.linspace(0,2*np.pi,ntheta,endpoint=False).astype('float32')
-#theta[0]= np.pi/5
 f = np.zeros([n0,n1,n2]).astype('complex64')
 f[n0//8:3*n0//8,n1//4:3*n1//4,n2//4:3*n2//4]=1
 
 
-with lcg.SolverLam(n0, n1, n2, det, ntheta, phi) as slv:
-    f_gpu = cp.array(f)
-    theta_gpu = cp.array(theta)    
+with lcg.SolverLam(n0, n1, n2, det, ntheta, phi,1e-3) as slv:
 
-    g_gpu = slv.fwd_lam(f_gpu,theta_gpu)
+    g_gpu = slv.fwd_lam(f,theta)
     g = fwd_laminography(f, theta, phi, det, [n0,n1,n2])    
-    print('fwd accuracy:', np.linalg.norm(g_gpu.get()-g), cp.linalg.norm(g_gpu))
-    # plt.subplot(1,3,1)
-    # print(np.real(res1[0]).shape)
-    # plt.imshow(np.real(res1[0]))
-    # plt.colorbar()
-    # plt.subplot(1,3,2)
-    # plt.imshow(np.real(res2[0]))
-    # plt.colorbar()
-    # plt.subplot(1,3,3)
-    # plt.imshow(np.real(res1[0]-res2[0]))
-    # plt.colorbar()
-    # plt.show()
-
+    print('fwd accuracy:', np.linalg.norm(g_gpu-g), np.linalg.norm(g_gpu))
     ff = adj_laminography(g, theta, phi, det, [n0,n1,n2])
-    ff_gpu = slv.adj_lam(g_gpu, theta_gpu)
-    print('adj accuracy:', np.linalg.norm(ff_gpu.get()-ff), cp.linalg.norm(ff_gpu))
+    ff_gpu = slv.adj_lam(g_gpu, theta)
+    print('adj accuracy:', np.linalg.norm(ff_gpu-ff), np.linalg.norm(ff_gpu))
     print('Adj test 1')
     print(np.sum(f*np.conj(ff)))
     print(np.sum(g*np.conj(g)))
     print('Adj test 2')
-    print(np.sum(f_gpu*cp.conj(ff_gpu)))
-    print(np.sum(g_gpu*cp.conj(g_gpu)))
-    gg_gpu = slv.fwd_lam(ff_gpu,theta_gpu)
+    print(np.sum(f*np.conj(ff_gpu)))
+    print(np.sum(g_gpu*np.conj(g_gpu)))
+    gg_gpu = slv.fwd_lam(ff_gpu,theta)
     print('Norm test')
     r = 1/ntheta/n0/n1/n2
     g_gpu*=r
     gg_gpu*=r*r
-    print(cp.sum(g_gpu*cp.conj(gg_gpu))/cp.sum(gg_gpu*cp.conj(gg_gpu)))    
+    print(np.sum(g_gpu*np.conj(gg_gpu))/np.sum(gg_gpu*np.conj(gg_gpu)))    
     

@@ -3,3 +3,6 @@ dist*
 tests/data
 tests/rec*
 src/*egg*
+.loglogin
+core
+settings.json
