@@ -203,10 +203,10 @@ with lcg.SolverLam(n0, n1, n2, det, ntheta, phi,1e-3) as slv:
 
     g_gpu = slv.fwd_lam(f,theta)
     g = fwd_laminography(f, theta, phi, det, [n0,n1,n2])    
-    print('fwd accuracy:', np.linalg.norm(g_gpu-g), np.linalg.norm(g_gpu))
+    print('fwd accuracy:', np.linalg.norm(g_gpu-g)/np.linalg.norm(g_gpu))
     ff = adj_laminography(g, theta, phi, det, [n0,n1,n2])
     ff_gpu = slv.adj_lam(g_gpu, theta)
-    print('adj accuracy:', np.linalg.norm(ff_gpu-ff), np.linalg.norm(ff_gpu))
+    print('adj accuracy:', np.linalg.norm(ff_gpu-ff)/np.linalg.norm(ff_gpu))
     print('Adj test 1')
     print(np.sum(f*np.conj(ff)))
     print(np.sum(g*np.conj(g)))

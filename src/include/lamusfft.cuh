@@ -28,9 +28,7 @@ class lamusfft {
 
   float2 *fdee;
 
-  cufftHandle plan3dfwd;
-  cufftHandle plan3dadj;
-
+  cufftHandle plan3d;
   cufftHandle plan2d;
   
   dim3 BS2d, BS3d, GS2d0, GS3d0, GS3d1, GS3d2, GS3d3;

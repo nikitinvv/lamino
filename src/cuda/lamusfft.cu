@@ -25,36 +25,25 @@ lamusfft::lamusfft(size_t n0, size_t n1, size_t n2, size_t det, size_t ntheta, f
   
   int ffts[3];
   int idist;
-  int odist;
   int inembed[3];
-  int onembed[3];
   // fft 2d
   ffts[0] = 2 * n2;
   ffts[1] = 2 * n1;
   ffts[2] = 2 * n0;
   idist = (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)* (2 * n2 + 2 * m2);
-  odist = (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)* (2 * n2 + 2 * m2);
   inembed[0] = 2 * n2 + 2 * m2; // Note the order is reverse!
   inembed[1] = 2 * n1 + 2 * m1;
   inembed[2] = 2 * n0 + 2 * m0;
-  onembed[0] = 2 * n2 + 2 * m2;
-  onembed[1] = 2 * n1 + 2 * m1;
-  onembed[2] = 2 * n0 + 2 * m0;
-  cufftPlanMany(&plan3dfwd, 3, ffts, inembed, 1, idist, onembed, 1, odist,
+  cufftPlanMany(&plan3d, 3, ffts, inembed, 1, idist, inembed, 1, idist,
                 CUFFT_C2C, 1);
-  cufftPlanMany(&plan3dadj, 3, ffts, onembed, 1, odist, inembed, 1, idist,
-                CUFFT_C2C, 1);
-
+  
   // fft 2d
   ffts[0] = det;
   ffts[1] = det;
   idist = det*det;
-  odist = det*det;
   inembed[0] = det;
   inembed[1] = det;
-  onembed[0] = det;
-  onembed[1] = det;
-  cufftPlanMany(&plan2d, 2, ffts, inembed, 1, idist, onembed, 1, odist,
+  cufftPlanMany(&plan2d, 2, ffts, inembed, 1, idist, inembed, 1, idist,
                 CUFFT_C2C, ntheta);
   
   BS3d = dim3(16, 16, 4);
@@ -82,8 +71,8 @@ void lamusfft::free() {
     cudaFree(x);
     cudaFree(y);
     cudaFree(z);
-    cufftDestroy(plan3dfwd);
-    cufftDestroy(plan3dadj);
+    cufftDestroy(plan3d);
+    cufftDestroy(plan3d);
     cufftDestroy(plan2d);
     is_free = true;
   }
@@ -97,12 +86,10 @@ void lamusfft::fwd(size_t g_, size_t f_, size_t theta_) {
   takexyz <<<GS3d0, BS3d>>> (x, y, z, theta, phi, det, ntheta);
 
   divker <<<GS3d1, BS3d>>> (fdee, f, mu0, mu1, mu2, n0, n1, n2, m0, m1,m2, TOMO_FWD);  
-
-  cudaDeviceSynchronize();
   
   fftshiftc3d <<<GS3d3, BS3d>>> (fdee, 2 * n0 + 2 * m0, 2 * n1 +2 * m1, 2 * n2 +2 * m2);
   
-  cufftExecC2C(plan3dfwd, (cufftComplex *)&fdee[m0 + m1 * (2 * n0 + 2 * m0) + m2 * (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)].x,
+  cufftExecC2C(plan3d, (cufftComplex *)&fdee[m0 + m1 * (2 * n0 + 2 * m0) + m2 * (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)].x,
                 (cufftComplex *)&fdee[m0 + m1 * (2 * n0 + 2 * m0) + m2 * (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)].x, CUFFT_FORWARD);
   
   fftshiftc3d <<<GS3d3, BS3d>>> (fdee, 2 * n0 + 2 * m0, 2 * n1 +2 * m1, 2 * n2 +2 * m2);
@@ -131,7 +118,7 @@ void lamusfft::adj(size_t f_, size_t g_, size_t theta_) {
   wrap <<<GS3d3, BS3d>>> (fdee, n0, n1, n2, m0, m1, m2, TOMO_ADJ);
 
   fftshiftc3d <<<GS3d3, BS3d>>> (fdee, 2 * n0 + 2 * m0, 2 * n1 +2 * m1, 2 * n2 +2 * m2);
-  cufftExecC2C(plan3dadj, (cufftComplex *)&fdee[m0 + m1 * (2 * n0 + 2 * m0) + m2 * (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)],
+  cufftExecC2C(plan3d, (cufftComplex *)&fdee[m0 + m1 * (2 * n0 + 2 * m0) + m2 * (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)],
                 (cufftComplex *)&fdee[m0 + m1 * (2 * n0 + 2 * m0) + m2 * (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1)], CUFFT_INVERSE);
   fftshiftc3d <<<GS3d3, BS3d>>> (fdee, 2 * n0 + 2 * m0, 2 * n1 +2 * m1, 2 * n2 +2 * m2);
   
