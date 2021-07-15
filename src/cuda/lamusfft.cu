@@ -4,8 +4,8 @@
 #include "kernels.cu"
 #include "shift.cu"
 
-lamusfft::lamusfft(size_t n0, size_t n1, size_t n2, size_t det, size_t ntheta, float phi,float eps)
-    : n0(n0), n1(n1), n2(n2), det(det), ntheta(ntheta), phi(phi) {
+lamusfft::lamusfft(size_t n0, size_t n1, size_t n2, size_t det, size_t ntheta, float phi, float gamma, float eps)
+    : n0(n0), n1(n1), n2(n2), det(det), ntheta(ntheta), phi(phi), gamma(gamma) {
   mu0 = -log(eps) / (2 * n0 * n0);
   mu1 = -log(eps) / (2 * n1 * n1);
   mu2 = -log(eps) / (2 * n2 * n2);
@@ -83,7 +83,7 @@ void lamusfft::fwd(size_t g_, size_t f_, size_t theta_) {
   cudaMemcpy(theta, (float *)theta_, ntheta * sizeof(float), cudaMemcpyDefault);
   cudaMemset(fdee, 0, (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1) * (2 * n2 + 2 * m2) * sizeof(float2));
 
-  takexyz <<<GS3d0, BS3d>>> (x, y, z, theta, phi, det, ntheta);
+  takexyz <<<GS3d0, BS3d>>> (x, y, z, theta, phi, gamma, det, ntheta);
 
   divker <<<GS3d1, BS3d>>> (fdee, f, mu0, mu1, mu2, n0, n1, n2, m0, m1,m2, TOMO_FWD);  
   
@@ -108,7 +108,7 @@ void lamusfft::adj(size_t f_, size_t g_, size_t theta_) {
   cudaMemcpy(g, (float2 *)g_, det * det * ntheta * sizeof(float2), cudaMemcpyDefault);
   cudaMemset(fdee, 0, (2 * n0 + 2 * m0) * (2 * n1 + 2 * m1) * (2 * n2 + 2 * m2) * sizeof(float2));
 
-  takexyz <<<GS3d0, BS3d>>> (x, y, z, theta, phi, det, ntheta);
+  takexyz <<<GS3d0, BS3d>>> (x, y, z, theta, phi, gamma, det, ntheta);
 
   fftshiftc2d <<<GS3d0, BS3d>>> (g, det, ntheta);
   cufftExecC2C(plan2d, (cufftComplex *)g, (cufftComplex *)g, CUFFT_FORWARD);

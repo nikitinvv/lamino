@@ -1,6 +1,5 @@
 import numpy as np
 import lamcg as lcg
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 def eq2us(x, f, eps, N):
