@@ -2,7 +2,7 @@ import numpy as np
 import lamcg as lcg
 import matplotlib.pyplot as plt
 
-def eq2us(x, f, eps, N):
+def eq2us(x, f, eps, n, nz):
     """
     USFFT from equally-spaced grid to unequally-spaced grid
     x - unequally-spaced grid 
@@ -10,16 +10,16 @@ def eq2us(x, f, eps, N):
     eps - accuracy of computing USFFT
     """
     # parameters for the USFFT transform
-    [N0, N1, N2] = N
+    [N0, N1, N2] = [nz, n ,n]
     mu0 = -np.log(eps)/(2*N0**2)
     mu1 = -np.log(eps)/(2*N1**2)
     mu2 = -np.log(eps)/(2*N2**2)
     Te1 = 1/np.pi*np.sqrt(-mu0*np.log(eps)+(mu0*N0)**2/4)
     Te2 = 1/np.pi*np.sqrt(-mu1*np.log(eps)+(mu1*N1)**2/4)
     Te3 = 1/np.pi*np.sqrt(-mu2*np.log(eps)+(mu2*N2)**2/4)
-    M0 = np.int(np.ceil(2*N0*Te1))
-    M1 = np.int(np.ceil(2*N1*Te2))
-    M2 = np.int(np.ceil(2*N2*Te3))
+    M0 = int(np.ceil(2*N0*Te1))
+    M1 = int(np.ceil(2*N1*Te2))
+    M2 = int(np.ceil(2*N2*Te3))
     
     # smearing kernel (ker)
     ker = np.zeros((2*N0, 2*N1, 2*N2))
@@ -54,9 +54,9 @@ def eq2us(x, f, eps, N):
     F = np.zeros(x.shape[0], dtype=complex)
     for k in range(x.shape[0]):
         F[k] = 0
-        ell0 = np.int(np.floor(2*N0*x[k, 0]))
-        ell1 = np.int(np.floor(2*N1*x[k, 1]))
-        ell2 = np.int(np.floor(2*N2*x[k, 2]))
+        ell0 = int(np.floor(2*N0*x[k, 0]))
+        ell1 = int(np.floor(2*N1*x[k, 1]))
+        ell2 = int(np.floor(2*N2*x[k, 2]))
         for i0 in range(2*M0+1):
             for i1 in range(2*M1+1):
                 for i2 in range(2*M2+1):
@@ -66,7 +66,7 @@ def eq2us(x, f, eps, N):
     return F
 
 
-def us2eq(x, f, eps, N):
+def us2eq(x, f, eps, n, nz):
     """
     USFFT from unequally-spaced grid to equally-spaced grid
     x - unequally-spaced grid 
@@ -74,16 +74,16 @@ def us2eq(x, f, eps, N):
     eps - accuracy of computing USFFT
     """
     # parameters for the USFFT transform
-    [N0, N1, N2] = N
+    [N0, N1, N2] = [nz, n ,n]
     mu0 = -np.log(eps)/(2*N0**2)
     mu1 = -np.log(eps)/(2*N1**2)
     mu2 = -np.log(eps)/(2*N2**2)
     Te1 = 1/np.pi*np.sqrt(-mu0*np.log(eps)+(mu0*N0)**2/4)
     Te2 = 1/np.pi*np.sqrt(-mu1*np.log(eps)+(mu1*N1)**2/4)
     Te3 = 1/np.pi*np.sqrt(-mu2*np.log(eps)+(mu2*N2)**2/4)
-    M0 = np.int(np.ceil(2*N0*Te1))
-    M1 = np.int(np.ceil(2*N1*Te2))
-    M2 = np.int(np.ceil(2*N2*Te3))
+    M0 = int(np.ceil(2*N0*Te1))
+    M1 = int(np.ceil(2*N1*Te2))
+    M2 = int(np.ceil(2*N2*Te3))
 
     # smearing kernel (ker)
     ker = np.zeros((2*N0, 2*N1, 2*N2))
@@ -94,9 +94,9 @@ def us2eq(x, f, eps, N):
     # smearing operation (G=f*thetaa)
     G = np.zeros([2*N0+2*M0, 2*N1+2*M1, 2*N2+2*M2], dtype=complex)
     for k in range(x.shape[0]):
-        ell0 = np.int(np.floor(2*N0*x[k, 0]))
-        ell1 = np.int(np.floor(2*N1*x[k, 1]))
-        ell2 = np.int(np.floor(2*N2*x[k, 2]))
+        ell0 = int(np.floor(2*N0*x[k, 0]))
+        ell1 = int(np.floor(2*N1*x[k, 1]))
+        ell2 = int(np.floor(2*N2*x[k, 2]))
         for i0 in range(2*M0+1):
             for i1 in range(2*M1+1):
                 for i2 in range(2*M2+1):
@@ -127,9 +127,9 @@ def us2eq(x, f, eps, N):
     return F
 
 
-def fwd_laminography(f, theta, phi, det, N):
-    [ku, kv] = np.meshgrid(np.arange(-det//2, det//2) /
-                           det, np.arange(-det//2, det//2)/det)
+def fwd_laminography(f, theta, phi, detw, deth, n, nz):
+    [ku, kv] = np.meshgrid(np.arange(-detw//2, detw//2) /
+                           detw, np.arange(-deth//2, deth//2)/deth)
     ku = np.ndarray.flatten(ku)
     kv = np.ndarray.flatten(kv)
     
@@ -139,7 +139,7 @@ def fwd_laminography(f, theta, phi, det, N):
     # plt.xlim(-0.5, 0.5)
     # plt.ylim(-0.5, 0.5)
     
-    x = np.zeros([len(theta), det*det, 3])
+    x = np.zeros([len(theta), detw*deth, 3])
     for itheta in range(len(theta)):
         x[itheta, :, 2] = ku*np.cos(theta[itheta])+kv*np.sin(theta[itheta])*np.cos(phi)
         x[itheta, :, 1] = ku*np.sin(theta[itheta])-kv*np.cos(theta[itheta])*np.cos(phi)
@@ -149,19 +149,20 @@ def fwd_laminography(f, theta, phi, det, N):
     # plt.show()
     x[x>=0.5] = 0.5 - 1e-5
     x[x<-0.5] = -0.5 + 1e-5
-    x = np.reshape(x, [len(theta)*det*det, 3])    
+    x = np.reshape(x, [len(theta)*detw*deth, 3])    
     # print(x[:17,0])
     # print(x[:17,1])
     # print(x[:17,2])
-    F = eq2us(x, f, 1e-3, N)
-    F = F.reshape([len(theta), det,det])
+    F = eq2us(x, f, 1e-3, n, nz)
+    F = F.reshape([len(theta), detw,deth])
     res = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(F,axes=(1,2)),axes=(1,2),norm="ortho"),axes=(1,2))
     return res
 
-def adj_laminography(f, theta, phi, det, N):
+def adj_laminography(f, theta, phi, detw, deth, n, nz):
     F = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(f,axes=(1,2)),axes=(1,2),norm="ortho"),axes=(1,2))
-    [ku, kv] = np.meshgrid(np.arange(-det//2, det//2) /
-                           det, np.arange(-det//2, det//2)/det)
+    [ku, kv] = np.meshgrid(np.arange(-detw//2, detw//2) /
+                           detw, np.arange(-deth//2, deth//2)/deth)
+    
     ku = np.ndarray.flatten(ku)
     kv = np.ndarray.flatten(kv)
     
@@ -171,7 +172,7 @@ def adj_laminography(f, theta, phi, det, N):
     # plt.xlim(-0.5, 0.5)
     # plt.ylim(-0.5, 0.5)
     
-    x = np.zeros([len(theta), det*det, 3])
+    x = np.zeros([len(theta), detw*deth, 3])
     for itheta in range(len(theta)):
         x[itheta, :, 2] = ku*np.cos(theta[itheta])+kv*np.sin(theta[itheta])*np.cos(phi)
         x[itheta, :, 1] = ku*np.sin(theta[itheta])-kv*np.cos(theta[itheta])*np.cos(phi)
@@ -180,30 +181,33 @@ def adj_laminography(f, theta, phi, det, N):
         # plt.show()
         # plt.pause(0.03)
     # plt.show()    
-    x = np.reshape(x, [len(theta)*det*det, 3])    
+    x = np.reshape(x, [len(theta)*detw*deth, 3])    
     x[x>=0.5] = 0.5 - 1e-5
     x[x<-0.5] = -0.5 + 1e-5
     F = np.ndarray.flatten(F)    
-    res = us2eq(-x, F, 1e-3, N)    
+    res = us2eq(-x, F, 1e-3, n, nz)    
     return res    
 
-n0 = 16
-n1 = 16
-n2 = 8
-det = 8
-ntheta = 8
+
+detw = 16
+deth = 16
+
 phi = np.pi/3
+n = detw
+nz = deth
+
+ntheta = 8
 theta = np.linspace(0,2*np.pi,ntheta,endpoint=False).astype('float32')
-f = np.zeros([n0,n1,n2]).astype('complex64')
-f[n0//8:3*n0//8,n1//4:3*n1//4,n2//4:3*n2//4]=1
+f = np.zeros([nz,n,n]).astype('complex64')
+f[nz//8:3*nz//8,n//4:3*n//4,n//4:3*n//4]=1
 
 
-with lcg.SolverLam(n0, n1, n2, det, ntheta, phi,1e-3) as slv:
+with lcg.SolverLam(n, nz, detw, deth, ntheta, phi,1e-3) as slv:
 
     g_gpu = slv.fwd_lam(f,theta)
-    g = fwd_laminography(f, theta, phi, det, [n0,n1,n2])    
+    g = fwd_laminography(f, theta, phi, detw, deth, n,nz)    
     print('fwd accuracy:', np.linalg.norm(g_gpu-g)/np.linalg.norm(g_gpu))
-    ff = adj_laminography(g, theta, phi, det, [n0,n1,n2])
+    ff = adj_laminography(g, theta, phi, detw, deth, n,nz)
     ff_gpu = slv.adj_lam(g_gpu, theta)
     print('adj accuracy:', np.linalg.norm(ff_gpu-ff)/np.linalg.norm(ff_gpu))
     print('Adj test 1')
@@ -214,8 +218,8 @@ with lcg.SolverLam(n0, n1, n2, det, ntheta, phi,1e-3) as slv:
     print(np.sum(g_gpu*np.conj(g_gpu)))
     gg_gpu = slv.fwd_lam(ff_gpu,theta)
     print('Norm test')
-    r = 1/ntheta/n0/n1/n2
+    r = 1/ntheta/nz/n/n
     g_gpu*=r
     gg_gpu*=r*r
     print(np.sum(g_gpu*np.conj(gg_gpu))/np.sum(gg_gpu*np.conj(gg_gpu)))    
-    
+
