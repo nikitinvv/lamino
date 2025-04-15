@@ -45,7 +45,7 @@ void __global__ circ(float2 *f, float r, int N, int Nz) {
   f[id0].y *= lam;
 }
 
-void __global__ takexyz(float *x, float *y, float *z, float *theta, float phi, int detw, int deth, int ntheta) {
+void __global__ takexyz(float *x, float *y, float *z, float *theta, float phi, float alpha,int detw, int deth, int ntheta) {
   int tx = blockDim.x * blockIdx.x + threadIdx.x;
   int ty = blockDim.y * blockIdx.y + threadIdx.y;
   int tz = blockDim.z * blockIdx.z + threadIdx.z;
@@ -53,9 +53,12 @@ void __global__ takexyz(float *x, float *y, float *z, float *theta, float phi, i
   if (tx >= detw || ty >= deth || tz >= ntheta)
     return;
   int id = tx + ty * detw + tz*detw*deth;
-  x[id] = (tx - detw / 2) / (float)detw * __cosf(theta[tz]) + (ty - deth / 2) / (float)deth * __sinf(theta[tz])*__cosf(phi);
-  y[id] = (tx - detw / 2) / (float)detw * __sinf(theta[tz]) - (ty - deth / 2) / (float)deth * __cosf(theta[tz])*__cosf(phi);
-  z[id] = (ty - deth / 2) / (float)deth *__sinf(phi);
+  // x[id] = (tx - detw / 2) / (float)detw * __cosf(theta[tz]) + (ty - deth / 2) / (float)deth * __sinf(theta[tz])*__cosf(phi);
+  // y[id] = (tx - detw / 2) / (float)detw * __sinf(theta[tz]) - (ty - deth / 2) / (float)deth * __cosf(theta[tz])*__cosf(phi);
+  // z[id] = (ty - deth / 2) / (float)deth *__sinf(phi);
+  x[id] = (tx - detw / 2) / (float)detw * __cosf(theta[tz])*__cosf(alpha)      + (ty - deth / 2) / (float)deth * (__sinf(theta[tz])*__cosf(phi)*__cosf(alpha)-__sinf(phi)*__sinf(alpha));
+  y[id] = (tx - detw / 2) / (float)detw * __sinf(theta[tz])                    - (ty - deth / 2) / (float)deth * __cosf(theta[tz])*__cosf(phi);
+  z[id] = (tx - detw / 2) / (float)detw * __cosf(theta[tz])*__sinf(alpha)      + (ty - deth / 2) / (float)deth * (__sinf(phi)*__cosf(alpha)+__cosf(phi)*__sinf(theta[tz]*__sinf(alpha)));
   if (x[id] >= 0.5f)
     x[id] = 0.5f - 1e-5;
   if (y[id] >= 0.5f)

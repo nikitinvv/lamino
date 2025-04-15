@@ -26,10 +26,11 @@ class SolverLam(lamusfft):
         Accuracy for the USFFT computation. Default: 1e-3.
     """
 
-    def __init__(self, n0, n1, n2, detw, deth, ntheta, phi, eps=1e-3):
+    def __init__(self, n0, n1, n2, detw, deth, ntheta, phi,alpha, center,eps=1e-3):
         """Please see help(SolverLam) for more info."""
         # create class for the tomo transform associated with first gpu
-        super().__init__(n2, n1, n0, detw,deth, ntheta, phi, eps)  # reorder sizes
+        super().__init__(n2, n1, n0, detw,deth, ntheta, phi,alpha, eps)  # reorder sizes
+        self.center=center
 
     def __enter__(self):
         """Return self at start of a with-block."""
@@ -48,6 +49,14 @@ class SolverLam(lamusfft):
 
         # C++ wrapper, send pointers to GPU arrays
         self.fwd(res.data.ptr, u_gpu.data.ptr, theta_gpu.data.ptr)
+        xi =cp.fft.fftfreq(res.shape[-1]).astype('float32')
+        w = cp.exp(-2*cp.pi*1j*self.center[1]*xi)
+        res = cp.fft.ifft((cp.fft.fft(res)*w))
+        
+        xi =cp.fft.fftfreq(res.shape[1]).astype('float32')
+        w = cp.exp(-2*cp.pi*1j*self.center[0]*xi)
+        res = cp.fft.ifft((cp.fft.fft(res,axis=1)*w[:,np.newaxis]),axis=1)
+        
         if(isinstance(u, np.ndarray)):
             res = res.get()
         return res
@@ -55,6 +64,13 @@ class SolverLam(lamusfft):
     def adj_lam(self, data, theta):
         """Adjoint Laminography transform (L^*)"""
         res = cp.zeros([self.n2, self.n1, self.n0], dtype='complex64')
+        xi =cp.fft.fftfreq(res.shape[-1]).astype('float32')
+        w = cp.exp(-2*cp.pi*1j*self.center[1]*xi)
+        data = cp.fft.ifft((cp.fft.fft(data)*w))
+        
+        xi =cp.fft.fftfreq(res.shape[-1]).astype('float32')
+        w = cp.exp(-2*cp.pi*1j*self.center[0]*xi)
+        data = cp.fft.ifft((cp.fft.fft(data,axis=1)*w[:,np.newaxis]),axis=1)
 
         data_gpu = cp.asarray(data.copy())
         theta_gpu = cp.asarray(theta)
